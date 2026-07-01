@@ -3,9 +3,13 @@ app/models/request_models.py
 
 Pydantic request models for the /chat endpoint.
 Schema is contractual — must not change without versioning.
+
+Per SHL spec: the API is stateless. Every POST /chat call carries the
+FULL conversation history. No session_id, no server-side persistence
+required for the contract to be honored.
 """
 
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,16 +33,12 @@ class ChatRequest(BaseModel):
     """
     Payload for POST /chat.
 
-    The caller sends their latest message and an optional session_id.
+    The caller sends the full conversation history on every call.
+    The service is stateless and stores no per-conversation state.
     """
 
-    session_id: Optional[str] = Field(
-        None,
-        description="Optional session ID. If not provided, a new session is created.",
-    )
-    message: str = Field(
+    messages: List[Message] = Field(
         ...,
         min_length=1,
-        max_length=8000,
-        description="The latest user message.",
+        description="Full conversation history so far, oldest message first.",
     )
