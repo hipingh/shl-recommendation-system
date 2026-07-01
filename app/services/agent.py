@@ -6,7 +6,7 @@ The central AI agent orchestrator.
 This is the brain of the system — it coordinates all services in the
 correct order:
 
-1. Reconstruct conversation state from messages.
+1. Reconstruct conversation state from the messages sent in the request.
 2. Classify intent.
 3. Route to the appropriate engine:
    - CLARIFY / UNKNOWN → ClarificationService
@@ -14,7 +14,9 @@ correct order:
    - COMPARE            → ComparisonService
    - OFF_TOPIC / PROMPT_INJECTION → RefusalService
 
-Every public method is stateless — all context comes from the messages.
+The service is fully stateless: every call carries the entire
+conversation history in request.messages, and nothing is persisted
+between calls. SessionService is no longer used in the request path.
 """
 
 import logging
@@ -28,8 +30,6 @@ from app.services.intent_service import IntentService
 from app.services.recommendation_service import RecommendationService
 from app.services.refusal_service import RefusalService
 from app.services.retrieval_service import RetrievalService
-
-from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,6 @@ class AgentOrchestrator:
         comparison_service: ComparisonService,
         clarification_service: ClarificationService,
         refusal_service: RefusalService,
-        session_service: SessionService,
     ) -> None:
         self._intent = intent_service
         self._conversation = conversation_service
@@ -60,31 +59,28 @@ class AgentOrchestrator:
         self._comparison = comparison_service
         self._clarification = clarification_service
         self._refusal = refusal_service
-        self._session = session_service
 
     def process(self, request: ChatRequest) -> ChatResponse:
         """
         Process a chat request through the full agent pipeline.
 
         Args:
-            request: ChatRequest containing the latest message and optional session_id.
+            request: ChatRequest containing the full conversation history
+                      (request.messages), oldest message first.
 
         Returns:
-            ChatResponse with reply, recommendations, session_id and end_of_conversation flag.
+            ChatResponse with reply, recommendations, and end_of_conversation flag.
         """
-        # ── Step 1: Manage session ID and store user message ──
-        session_id = self._session.get_or_create_session(request.session_id)
-        self._session.save_message(session_id, "user", request.message)
+        # ── Step 1: Use the messages sent by the caller directly ──
+        # No session lookup, no DB write — the caller is the source of truth.
+        messages = request.messages
 
-        # ── Step 2: Load complete session history ─────────────
-        messages = self._session.get_history(session_id)
-
-        # ── Step 3: Classify intent ───────────────────────────
+        # ── Step 2: Classify intent ───────────────────────────
         classification = self._intent.classify(messages)
         intent = classification.intent
-        logger.info("Session %s | Processing intent: %s", session_id, intent)
+        logger.info("Processing intent: %s | turns=%d", intent, len(messages))
 
-        # ── Step 4: Route by intent and build response ────────
+        # ── Step 3: Route by intent and build response ────────
         if intent in ("OFF_TOPIC", "PROMPT_INJECTION"):
             response = self._refusal.refuse(intent)
         elif intent == "COMPARE":
@@ -94,16 +90,11 @@ class AgentOrchestrator:
             state = self._conversation.reconstruct_state(messages)
             conversation_history = self._conversation.format_for_prompt(messages)
             response = self._handle_recommend(state, conversation_history)
-        else: # CLARIFY or UNKNOWN
+        else:  # CLARIFY or UNKNOWN
             state = self._conversation.reconstruct_state(messages)
             conversation_history = self._conversation.format_for_prompt(messages)
             response = self._handle_clarify(state, conversation_history)
 
-        # ── Step 5: Save assistant response to DB ─────────────
-        self._session.save_message(session_id, "assistant", response.reply)
-
-        # ── Step 6: Inject session_id and return ──────────────
-        response.session_id = session_id
         return response
 
     # ── Intent Handlers ───────────────────────────────────────
@@ -160,3 +151,5 @@ class AgentOrchestrator:
             assessment_name_b=assessment_names[1],
             state=state,
         )
+
+
