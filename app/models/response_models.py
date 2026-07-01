@@ -33,13 +33,11 @@ class ChatResponse(BaseModel):
     """
     Response payload for POST /chat.
 
-    This schema is fixed — consumers depend on it.
+    This schema is fixed — consumers depend on it exactly as specified:
+    reply, recommendations, end_of_conversation. No session_id — the
+    service is stateless.
     """
 
-    session_id: str = Field(
-        default="",
-        description="The unique session ID associated with this chat history.",
-    )
     reply: str = Field(
         ...,
         description="The agent's natural-language response to the user.",
@@ -58,3 +56,4 @@ class ChatResponse(BaseModel):
             "and the conversation can be considered complete."
         ),
     )
+    
