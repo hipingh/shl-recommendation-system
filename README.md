@@ -76,7 +76,7 @@ Copy the example environment template to `.env`:
 ```bash
 cp .env.example .env
 ```
-Open the `.env` file and replace the placeholder `GROQ_API_KEY` with your actual Groq key:
+Open the `.env` file and replace the placeholder `GROQ_API_KEY` with your actual Groq key (you can create your API keys from the [Groq Console Keys Page](https://console.groq.com/keys)):
 ```env
 GROQ_API_KEY=gsk_your_actual_key_here
 PORT=8002
