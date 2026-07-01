@@ -31,41 +31,79 @@ IntentService (Groq LLaMA-3.3-70B)
 | Vector DB | ChromaDB (persistent) |
 | Catalog | SHL Product Catalog JSON (400+ assessments) |
 
-## Quick Start
+## Step-by-Step Setup Guide
 
-### 1. Install dependencies
+Follow these detailed steps to set up and run the project from scratch:
 
+### 1. Clone the Repository & Navigate to Project Root
+First, ensure you are in the project root directory:
 ```bash
+cd shl-recommendation-system
+```
+
+### 2. Create a Virtual Environment (`.venv`)
+Create a Python 3.12+ virtual environment to isolate the project's dependencies:
+```bash
+python3 -m venv .venv
+```
+
+### 3. Activate the Virtual Environment
+Activate the environment depending on your operating system:
+* **Linux / macOS**:
+  ```bash
+  source .venv/bin/activate
+  ```
+* **Windows (Command Prompt)**:
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+* **Windows (PowerShell)**:
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  ```
+
+Once activated, your terminal prompt should show `(.venv)`.
+
+### 4. Install Dependencies
+Ensure `pip` is upgraded, then install all required packages:
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 2. Configure environment
-
+### 5. Configure the Environment Secret Key
+Copy the example environment template to `.env`:
 ```bash
 cp .env.example .env
-# Edit .env and set your GROQ_API_KEY
+```
+Open the `.env` file and replace the placeholder `GROQ_API_KEY` with your actual Groq key:
+```env
+GROQ_API_KEY=gsk_your_actual_key_here
+PORT=8002
 ```
 
-### 3. Build the catalog
-
+### 6. Build the Catalog (Downloads SHL Assessment Data)
+Run the catalog build script. This will download and normalize the SHL assessment collection to `app/data/catalog.json`:
 ```bash
 python scripts/build_catalog.py
 ```
 
-### 4. Build the vector store
-
+### 7. Build the Vector Store (Generates Embeddings)
+Generate document embeddings for all assessments and store them in the Chroma vector database:
 ```bash
 python scripts/build_vectorstore.py
 ```
 
-### 5. Start the server
-
+### 8. Start the FastAPI Server
+Run the FastAPI web application with hot-reloading enabled:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8002
+uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
-The API will be live at: **http://localhost:8002**  
-Swagger Docs: **http://localhost:8002/docs**
+The API will now be live:
+* **Base URL**: http://localhost:8002
+* **Swagger API Documentation**: http://localhost:8002/docs
+* **ReDoc API Documentation**: http://localhost:8002/redoc
 
 ---
 
