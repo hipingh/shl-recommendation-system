@@ -164,7 +164,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         comparison_service=comparison_service,
         clarification_service=clarification_service,
         refusal_service=refusal_service,
-        session_service=session_service,
     )
 
     # ── 7. Store in app.state ─────────────────────────────────
